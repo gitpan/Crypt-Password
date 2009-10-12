@@ -1,5 +1,5 @@
 ---
-abstract: 'Utilities functions for Unix-style Hashed Passwords'
+abstract: 'Unix-style, Variously Hashed Passwords'
 author:
   - 'Catalyst SRS Team <team-srs@catalyst.net.nz>'
 build_requires:
@@ -22,4 +22,4 @@ requires:
   perl: 5.008005
 resources:
   license: http://opensource.org/licenses/artistic-license.php
-version: 0.01
+version: 0.02

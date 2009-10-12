@@ -1,3 +1,5 @@
+CHANGES
+COPYING.txt
 inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
@@ -12,6 +14,7 @@ MANIFEST			This list of files
 META.yml
 pm_to_blib
 README
+SubmittingPatches
 t/90-pod-syntax.t
 t/92-license.t
 t/93-perltidy.t
