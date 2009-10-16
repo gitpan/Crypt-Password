@@ -6,7 +6,7 @@ use Module::Install::Base ();
 
 use vars qw{$VERSION @ISA $ISCORE};
 BEGIN {
-	$VERSION = '0.91';
+	$VERSION = '0.90';
 	@ISA     = 'Module::Install::Base';
 	$ISCORE  = 1;
 }
@@ -502,17 +502,6 @@ sub requires_from {
 		my $module  = shift @requires;
 		my $version = shift @requires;
 		$self->requires( $module => $version );
-	}
-}
-
-sub test_requires_from {
-	my $self     = shift;
-	my $content  = Module::Install::_readperl($_[0]);
-	my @requires = $content =~ m/^use\s+([^\W\d]\w*(?:::\w+)*)\s+([\d\.]+)/mg;
-	while ( @requires ) {
-		my $module  = shift @requires;
-		my $version = shift @requires;
-		$self->test_requires( $module => $version );
 	}
 }
 

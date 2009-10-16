@@ -9,7 +9,7 @@
 use inc::Module::Install;
 
 name            ("Crypt-Password");
-abstract        ("Unix-style, Variously Hashed Passwords");
+abstract        ("Utilities functions for Unix-style Hashed Passwords");
 author          ("Catalyst SRS Team <team-srs\@catalyst.net.nz>");
 version_from    ("lib/Crypt/Password.pm");
 license         ('artistic');
