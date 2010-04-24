@@ -1,44 +1,109 @@
 package Crypt::Password;
-use Moose;
+use Exporter 'import';
+@EXPORT = ('password');
+our $VERSION = "0.05";
 
-our $VERSION = "0.04";
-
-# TODO write export crypt_password($plain) and check_password($plain, $hashed)
+use Carp;
 
 use overload
     '""' => \&crypt,
     'eq' => \&crypt,
     'nomethod' => \&crypt;
 
-has 'password' => (
-    is => 'rw',
-    trigger => sub { shift->_crypt() },
-    required => 1,
-    clearer => 'forget_password',
-);
-
-has 'crypted' => (
-    is => 'rw',
-    predicate => 'is_crypted',
-);
-
-has 'salt'=> (
-    is => 'ro',
-    lazy_build => 1,
-    builder => '_invent_salt',
-);
-
 # from libc6 crypt/crypt-entry.c
-my %magic_strings = (
+our %alg_to_magic = (
     md5 => '$1$',
     sha256 => '$5$',
     sha512 => '$6$',
 );
-# TODO could be figured out from pre-crypted text like salt is
-has 'digest' => (
-    is => 'ro',
-    default => sub { "sha256" },
-);
+
+our %magic_to_alg = reverse %alg_to_magic;
+
+sub new {
+    shift;
+    password(@_);
+}
+
+sub password {
+    my $self = bless {}, __PACKAGE__;
+    
+    $self->input(shift);
+    
+    unless ($self->{crypted}) {
+        $self->salt(shift);
+        
+        $self->algorithm(shift); 
+        
+        $self->crypt();
+    }
+
+    $self
+}
+
+sub crypt {
+    my $self = shift;
+    
+    $self->{crypted} ||= $self->_crypt
+}
+
+
+
+sub input {
+    my $self = shift;
+    $self->{input} = shift;
+    if ($self->_looks_crypted($self->{input})) {
+        $self->{crypted} = delete $self->{input}
+    }
+}
+
+sub salt {
+    my $self = shift;
+    my $provided = shift;
+    if (defined $provided) {
+        $self->{salt} = $provided
+    }
+    else {
+        $self->{salt} ||= do {
+            if ($self->{crypted}) {
+                (split /\$/, $self->{crypted})[2]
+            }
+            else {
+                $self->_invent_salt()
+            }
+        };
+    }
+}
+
+sub algorithm {
+    my $self = shift;
+    $alg = shift;
+    if ($alg) {
+        if (exists $alg_to_magic{lc $alg}) {
+            $self->{algorithm_magic} = $alg_to_magic{lc $alg};
+            $self->{algorithm} = lc $alg;
+        }
+        else {
+            $self->{algorithm_magic} = $alg;
+            $self->{algorithm} = $magic_to_alg{lc $alg};
+        }
+    }
+    elsif (!$self->{algorithm}) {
+        $self->algorithm($self->_default_algorithm)
+    }
+    else {
+        $self->{algorithm}
+    }
+}
+
+sub _crypt {
+    my $self = shift;
+    
+    defined $self->{input} || croak "no input!";
+    $self->{algorithm_magic} || croak "no algorithm!";
+    defined $self->{salt} || croak "invalid salt!";
+    
+    CORE::crypt(delete $self->{input}, $self->{algorithm_magic}.$self->{salt})
+}
 
 sub check {
     my $self = shift;
@@ -47,41 +112,7 @@ sub check {
     CORE::crypt($plaintext, $self) eq "$self";
 }
 
-sub string_is_crypted {
-    $_[1] && $_[1] =~ m{^\$\d+\$.*\$.+$};
-}
 
-sub crypt {
-    my $self = shift;
-    $self->crypted;
-}
-
-sub _crypt {
-    my ($self, $password) = @_;
-    
-    my $digest = $self->digest;
-    my $magic_string = $magic_strings{$digest}
-        || die "no such digest algorithm: $digest";
-    my $salt = $magic_string.$self->salt;
-    
-    return CORE::crypt($password, $salt);
-}
-
-around '_crypt' => sub {
-    my ($orig, $self) = @_;
-    
-    my $crypted;
-    my $password = $self->password;
-    if ($self->string_is_crypted($password)) {
-        $crypted = $password;
-    }
-    else {
-        $crypted = $self->$orig($password);
-    }
-    $self->crypted($crypted);
-    $self->forget_password();
-    $crypted;
-};
 
 our @valid_salt = ( "a".."z", "A".."Z", "0".."9", qw(/ \ ! @ % ^), "#" );
 
@@ -89,27 +120,14 @@ sub _invent_salt {
     join "", map { $valid_salt[rand(@valid_salt)] } 1..8;
 }
 
-around '_invent_salt' => sub {
-    my ($orig, $self) = @_;
-    
-    my $salt;
-    if ($self->is_crypted) {
-        $salt = (split /\$/, $self->crypted)[2];
-    }
-    else {
-        $salt = $self->$orig();
-    }
-    return $salt
-};
+sub _looks_crypted {
+    my $self = shift;
+    my $string = shift;
+    $string && $string =~ m{^\$\d+\$.*\$.+$}
+}
 
-sub BUILDARGS {
-    my $class = shift;
-    my %args;
-    for ("password", "salt", "digest") {
-        $args{$_} = shift if @_;
-        delete $args{$_} unless defined $args{$_};
-    }
-    \%args
+sub _default_algorithm {
+    "sha256"
 }
 
 1;
@@ -124,45 +142,101 @@ Crypt::Password - Unix-style, Variously Hashed Passwords
 
  use Crypt::Password;
  
- # sha256, generated salt:
- my $hashed = Crypt::Password->new("password");
+ my $hashed = password("password");
  
- # the above $hashed might look like:
- # $5$%RK2BU%L$aFZd1/4Gpko/sJZ8Oh.ZHg9UvxCjkH1YYoLZI6tw7K8
- # the format goes $digest$salt$hash
+ $user->set_password($hashed);
  
- say $hashed->check("password") ? "correct" : "wrong";
+ if ($user->get_password eq password($from_client)) {
+     # authenticated
+ }
  
- # sha256, supplied salt:
- my $hashed = Crypt::Password->new("password", "salt");
+ # This is called Modular Crypt Format.
+ 
+ if (password($from_database)->check($from_user)) {
+     # authenticated
+ }
+ 
+ # Default algorithm, supplied salt:
+ my $hashed = password("password", "salt");
  
  # md5, no salt:
- my $hashed = Crypt::Password->new("password", "", "md5");
+ my $hashed = password("password", "", "md5");
+ 
+ # sha512, invented salt: 
+ my $hashed = password("password", undef, "sha512");
 
 =head1 DESCRIPTION
 
-This is just a wrapper for perl's crypt(), which can do everything you would
-probably want to do to store a password, but this is supposed to provide the
-various uses easier.
+This is just a wrapper for perl's C<crypt()>, which can do everything you would
+probably want to do to store a password, but this is to make usage easier.
 
-Given a string it defaults to using sha256 and generates a salt for you.  The
-salt can be supplied as the second argument to the constructor, or avoided by
-passing an empty string. The digest algorithm can be supplied as the third
-argument to the constructor.
+The object stringifies to the return string of the crypt() function, which is
+usually (see L<KNOWN ISSUES>) in Modular Crypt Format:
+
+ # scalar($hashed):
+ #    v digest   v hash ->
+ #   $5$%RK2BU%L$aFZd1/4Gpko/sJZ8Oh.ZHg9UvxCjkH1YYoLZI6tw7K8
+ #      ^ salt ^
+
+That you can store, etc, retrieve then give it to C<password()> again to
+C<-E<gt>check($given_password)> or string compare to the output of a new
+C<password($given_password)>.
+
+If the given string is already hashed it is assumed to be okay to use it as is.
+This means users can supply pre-hashed passwords to you.
+
+=head1 FUNCTIONS
+
+=over
+
+=item password ( $password [, $salt [, $algorithm]] )
+
+Constructs a Crypt::Password object.
+
+=back
+
+=head1 METHODS
+
+=over
+
+=item check ( $another_password )
+
+Checks the given password hashes the same as that this object represents.
+
+=item hash
+
+Returns the hash.
+
+=item salt
+
+Returns the salt.
+
+=item algorithm
+
+Returns the algorithm by name.
+
+=item algorithm_arg
+
+Returns the algorithm as it is represented in the Modular Crypt Formatted
+output of C<crypt(3)>.
+
+=back
 
 =head1 KNOWN ISSUES
 
-Doesn't seem to work on Darwin.
+Cryptographic functionality depends greatly on your local glibc's B<crypt(3)>.
+Old Linux may not support sha*, many other platforms only support md5, or that
+and Blowfish, etc.
 
 =head1 SUPPORT, SOURCE
 
 If you have a problem, submit a test case via a fork of the github repo.
 
- http://github.com/st3vil/crypt-password
+ http://github.com/st3vil/Crypt-Password
 
 =head1 AUTHOR AND LICENCE
 
-Code by Steve Craig, L<steve@catalyst.net.nz>, idea by Sam Vilain,
+Code by Steve Eirium, L<nostrasteve@gmail.com>, idea by Sam Vilain,
 L<sam.vilain@catalyst.net.nz>.  Development commissioned by NZ
 Registry Services.
 

@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.05 2010-04-24
+* rewrite without Moose
+
 0.04 2009-10-17
 * test fixes; avoid isnt(), plan once
 

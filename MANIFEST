@@ -14,7 +14,7 @@ MANIFEST			This list of files
 META.yml
 README
 SubmittingPatches
+t/01-crypt-password.t
 t/90-pod-syntax.t
 t/92-license.t
 t/93-perltidy.t
-t/Crypt-Password.t
