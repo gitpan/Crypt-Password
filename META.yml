@@ -1,24 +1,4 @@
 ---
-abstract: 'Utilities functions for Unix-style Hashed Passwords'
-author:
-  - 'Catalyst SRS Team <team-srs@catalyst.net.nz>'
-build_requires:
-  ExtUtils::MakeMaker: 6.42
-configure_requires:
-  ExtUtils::MakeMaker: 6.42
-distribution_type: module
-generated_by: 'Module::Install version 0.91'
-license: artistic
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-name: Crypt-Password
-no_index:
-  directory:
-    - inc
-    - t
-requires:
-  perl: 5.008005
 resources:
   license: http://opensource.org/licenses/artistic-license.php
-version: 0.04
+  repository: http://github.com/st3vil/Crypt-Password
