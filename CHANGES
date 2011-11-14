@@ -1,5 +1,9 @@
 Revision history for Crypt::Password
 
+0.07 2011-11-14
+* doc edits
+* replace the somehow-deleted inc/Module/Install...
+
 0.06 2011-11-12
 * FreeSec (darwin, BSD) support
 * warning labels in docs about not definitely crypting

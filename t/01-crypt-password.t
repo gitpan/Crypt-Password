@@ -15,6 +15,15 @@ diag "testing Crypt::Password (glib=".($glib ? "yes" : "no").")";
 diag "os is $^O";
 
 if ($glib) {
+#         _  _  _           
+#        | |(_)| |          
+#   __ _ | | _ | |__    ___ 
+#  / _` || || || '_ \  / __|
+# | (_| || || || |_) || (__ 
+#  \__, ||_||_||_.__/  \___|
+#   __/ |                   
+#  |___/                    
+
     diag "set algorithm";
     my $c = mock;
     is $c->algorithm, "sha256", "default algorithm";
@@ -36,11 +45,10 @@ if ($glib) {
     is $c->algorithm('3a'), undef, "set unknown id";
     is $c->{algorithm}, undef, "unknown id";
     is $c->{algorithm_id}, '3a', "id";
-}
 
-if ($glib) {
+
     diag "generate salt";
-    my $c = mock;
+    $c = mock;
     my $salt_1 = $c->salt;
     like $salt_1, qr/^\S{8}$/, "salt generated";
     $c = mock;
@@ -50,12 +58,11 @@ if ($glib) {
     
     is $c->salt("4fatness"), "4fatness", "salt set, returned";
     is $c->{salt}, "4fatness", "salt set, returned";
-}
 
-if ($glib) {
+    
     diag "crypt some text";
     
-    my $c = password("hello0");
+    $c = password("hello0");
     like $c, qr/^\$5\$(........)\$[a-zA-Z0-9\.\/]{43}$/, "crypted";
     
     my $c2 = password("hello0");
@@ -67,8 +74,44 @@ if ($glib) {
     my $c3 = password("hello0", $c->salt);
     is($c, $c3, "same salt");
     ok($c3->check("hello0"), "yes indeed");
+    
+    
+    diag "documented stuff";
+    {
+        my $hashed = password("password", "salt");
+        like $hashed, qr/^\$5\$salt\$.{43}$/, "Default algorithm, supplied salt";
+    }
+
+    {
+        my $hashed = password("password", "", "md5");
+        like $hashed, qr/^\$1\$\$.{22}$/, "md5, no salt";
+    }
+
+    {
+        my $hashed = password("password", undef, "sha512");
+        like $hashed, qr/^\$6\$(.{8})\$.{86}$/, "sha512, invented salt";
+    }
+
+    {
+        my $password = '$5$%RK2BU%L$aFZd1/4Gpko/sJZ8Oh.ZHg9UvxCjkH1YYoLZI6tw7K8';
+        is $password, password($password), "password embodied by password()";
+        isnt $password, crypt_password($password), "password recrypted by crypt_password()";
+
+        # lately insane
+        ok password($password) eq password($password), "comparison test";
+        my $p1 = password($password);
+        my $p2 = password($password);
+        ok $p1 eq $p2, "comparison test";
+    }
 }
 else {
+# ______                    _____             
+# |  ___|                  /  ___|            
+# | |_    _ __   ___   ___ \ `--.   ___   ___ 
+# |  _|  | '__| / _ \ / _ \ `--. \ / _ \ / __|
+# | |    | |   |  __/|  __//\__/ /|  __/| (__ 
+# \_|    |_|    \___| \___|\____/  \___| \___|
+
     my $c = password("hello0");
     like $c, qr/^\$_\S{8}\$\S{11}$/, "crypted: looks good";
     like password("hello0", "dg"), qr/^\$..\$\S{11}$/, "crypted: 2char supplied salt";
@@ -136,36 +179,8 @@ ANSWERS
     ok($c2->check("123"), "123 still good");
     is($c2_2->salt, "12341234", "can extract the salt");
     ok(!password("$c2")->check('$_12341234$123'), "can't just pass crypted stuff into check()");
+    my $crypted = '$_12345555$V4oENXvTMYk';
+    is(password($crypted), $crypted, "crypted password embodied");
+    isnt(crypt_password($crypted), $crypted, "crypted crypt_password recrypted");
 }
 
-if ($glib) {
-    diag "documented stuff";
-    {
-        my $hashed = password("password", "salt");
-        like $hashed, qr/^\$5\$salt\$.{43}$/, "Default algorithm, supplied salt";
-    }
-
-    {
-        my $hashed = password("password", "", "md5");
-        like $hashed, qr/^\$1\$\$.{22}$/, "md5, no salt";
-    }
-
-    {
-        my $hashed = password("password", undef, "sha512");
-        like $hashed, qr/^\$6\$(.{8})\$.{86}$/, "sha512, invented salt";
-    }
-
-    {
-        my $password = '$5$%RK2BU%L$aFZd1/4Gpko/sJZ8Oh.ZHg9UvxCjkH1YYoLZI6tw7K8';
-        is $password, password($password), "password embodied by password()";
-        isnt $password, crypt_password($password), "password recrypted by crypt_password()";
-
-        # lately insane
-        ok password($password) eq password($password), "comparison test";
-        my $p1 = password($password);
-        my $p2 = password($password);
-        ok $p1 eq $p2, "comparison test";
-    }
-}
-
-1;

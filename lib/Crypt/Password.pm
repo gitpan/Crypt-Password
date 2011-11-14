@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.06";
+our $VERSION = "0.07";
 
 use Carp;
 
@@ -230,7 +230,7 @@ Crypt::Password - Unix-style, Variously Hashed Passwords
 
  # you also might want to
  password($a) eq password($b)
- # WARNING: password() will embody but not crypt an already crypted string
+ # WARNING: password() will embody but not crypt an already crypted string.
  #          if you are checking something from the outside world, use check()
 
  # imagine stealing a crypted string and using it as a password. it happens.
@@ -304,7 +304,7 @@ Checks the given password hashes the same as that this object represents.
 
 =item crypt
 
-Returns the crypt string, same stringifying the object.
+Returns the crypt string, same as stringifying the object.
 
 =item salt
 
