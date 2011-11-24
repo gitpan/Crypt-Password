@@ -18,11 +18,122 @@ our %alg_to_id = (
     sha512 => '6',
 );
 our %id_to_alg = reverse %alg_to_id;
-sub _default_algorithm { "sha256" }
 
-our $glib = (`man crypt`)[-1] !~ /FreeSec/;
-
+# switches off embodying crypted-looking passwords
 our $definitely_crypt;
+
+our $crypt_flav = do {
+    $_ = (`man crypt`)[-1];
+    /NetBSD/ ? 'netbsd' :
+    /OpenBSD/ ? 'openbsd' :
+    /FreeBSD/ ? 'freebsd' :
+    /FreeSec/ ? 'freesec' :
+                'glib'
+};
+our $flav_dispatch = {
+    glib => {
+        looks_crypted => sub {
+            return $_[0] =~ m{^\$.+\$.*\$.+$}
+        },
+        salt_provided => sub {
+            return shift;
+        },
+        extract_salt => sub {
+            return (split /\$/, $_[0])[2]
+        },
+        format_crypted => sub {
+            return shift;
+        },
+        form_salt => sub {
+            my ($s, $self) = @_;
+            if ($self->{algorithm_id}) {
+                $s = sprintf('$%s$%s', $self->{algorithm_id}, $s);
+            }
+            else {
+                # ->check(), alg and salt from ourselves, the rest be ignored
+                $s = "$self";
+            }
+            return $s;
+        },
+        default_algorithm => sub {
+            return "sha256";
+        },
+    },
+    freesec => {
+        looks_crypted => sub {
+            # with our dollar-signs added in around the salt
+            return $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x
+        },
+        salt_provided => sub {
+            my $provided = shift;
+            # salt must be 2 or 8 or entropy leaks in around the side
+            # I am serious
+            if ($provided =~    m/^\$(_.{8}|_?.{2})\$(.{11})?$/
+                || $provided =~ m/^  (_.{8}|_?.{2})  (.{11})?$/x) {
+                $provided = $1;
+            }
+            if ($provided =~ /^_..?$/) {
+                croak "Bad salt input:"
+                    ." 2-character salt cannot start with _";
+            }
+            $provided =~ s/^_//;
+            if ($provided !~ m/^(.{8}|.{2})$/) {
+                croak "Bad salt input:"
+                    ." salt must be 2 or 8 characters long";
+            }
+            return $provided;
+        },
+        extract_salt => sub {
+            $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x;
+            my $s = $1;
+            $s || croak "Bad crypted input:"
+                    ." salt must be 2 or 8 characters long";
+            $s =~ s/^_//;
+            return $s
+        },
+        format_crypted => sub {
+            my $crypt = shift;
+            # makes pretty ambiguous crypt strings, lets add some dollar signs
+            $crypt =~ s/^(_.{8}|..)(.{11})$/\$$1\$$2/
+                || croak "failed to understand FreeSec crypt: '$crypt'";
+            return $crypt;
+        },
+        form_salt => sub {
+            my ($s) = @_;
+            if (length($s) == 8) {
+                $s = "_$s"
+            }
+            return $s;
+        },
+        default_algorithm => sub {
+            return "DES" # does nothing
+        },
+    },
+    freebsd => {
+        base => "glib",
+        default_algorithm => sub {
+            return "blowfish"
+        },
+    },
+    netbsd => {
+        base => "freebsd",
+    },
+    openbsd => {
+        base => "freebsd",
+    },
+};
+
+sub flav {
+    my $what = shift;
+    my $ms = $flav_dispatch->{$crypt_flav} || die;
+    unless (exists $ms->{$what}) {
+        if (exists $ms->{base}) {
+            return flav($ms->{base}, @_);
+        }
+        die "no $what handler for flav $crypt_flav";
+    }
+    return $ms->{$what}->(@_);
+}
 
 sub new {
     shift;
@@ -67,49 +178,21 @@ sub input {
 sub _looks_crypted {
     my $self = shift;
     my $string = shift || return;
-    $glib ? $string =~ m{^\$.+\$.*\$.+$}
-            # with our dollar-signs added in around the salt
-          : $string =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x
+
+    return flav(looks_crypted => $string);
 }
 
 sub salt {
     my $self = shift;
     my $provided = shift;
     if (defined $provided) {
-        if (!$glib) {
-            # salt must be 2 or 8 or entropy leaks in around the side
-            # I am serious
-            if ($provided =~    m/^\$(_.{8}|_?.{2})\$(.{11})?$/
-                || $provided =~ m/^  (_.{8}|_?.{2})  (.{11})?$/x) {
-                $provided = $1;
-            }
-            if ($provided =~ /^_..?$/) {
-                croak "Bad salt input:"
-                    ." 2-character salt cannot start with _";
-            }
-            $provided =~ s/^_//;
-            if ($provided !~ m/^(.{8}|.{2})$/) {
-                croak "Bad salt input:"
-                    ." salt must be 2 or 8 characters long";
-            }
-        }
-        $self->{salt} = $provided;
+        $self->{salt} = flav(salt_provided => $provided);
     }
     else {
         return $self->{salt} if defined $self->{salt};
         return $self->{salt} = do {
             if ($self->{crypted}) {
-                if ($glib) {
-                    (split /\$/, $self->{crypted})[2]
-                }
-                else {
-                    $self->{crypted} =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x;
-                    my $s = $1;
-                    $s || croak "Bad crypted input:"
-                            ." salt must be 2 or 8 characters long";
-                    $s =~ s/^_//;
-                    $s
-                }
+                return flav(extract_salt => $self->{crypted});
             }
             else {
                 $self->_invent_salt()
@@ -122,7 +205,7 @@ sub algorithm {
     my $self = shift;
     $alg = shift;
     if ($alg) {
-        $alg =~ s/^\$(.+)\$$/$1/;
+        $alg =~ s/^\$?(.+)\$?$/$1/;
         if (exists $alg_to_id{lc $alg}) {
             $self->{algorithm_id} = $alg_to_id{lc $alg};
             $self->{algorithm} = lc $alg;
@@ -134,7 +217,7 @@ sub algorithm {
         }
     }
     elsif (!$self->{algorithm}) {
-        $self->algorithm($self->_default_algorithm)
+        $self->algorithm(flav(default_algorithm));
     }
     else {
         $self->{algorithm}
@@ -166,12 +249,7 @@ sub check {
 sub _do_crypt {
     my ($input, $salt) = @_;
     my $crypt = CORE::crypt($input, $salt);
-    if (!$glib) {
-        # FreeSec
-        # makes pretty ambiguous crypt strings, lets add some dollar signs
-        $crypt =~ s/^(_.{8}|..)(.{11})$/\$$1\$$2/
-            || croak "failed to understand FreeSec crypt: '$crypt'";
-    }
+    $crypt = flav(format_crypted => $crypt);
     return $crypt;
 }
 
@@ -179,24 +257,7 @@ sub _form_salt {
     my $self = shift;
     my $s = $self->salt;
     croak "undef salt!?" unless defined $s;
-    if ($glib) {
-        # glib
-        if ($self->{algorithm_id}) {
-            $s = sprintf('$%s$%s', $self->{algorithm_id}, $s);
-        }
-        else {
-            # ->check(), alg and salt from ourselves
-            $s = "$self";
-        }
-    }
-    else {
-        # FreeSec
-        if (length($s) == 8) {
-            $s = "_$s"
-        }
-        return $s;
-    }
-    return $s;
+    return flav(form_salt => $s, $self);
 }
 
 our @valid_salt = ( "/", ".", "a".."z", "A".."Z", "0".."9" );

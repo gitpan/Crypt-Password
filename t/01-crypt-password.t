@@ -10,18 +10,21 @@ use_ok "Crypt::Password";
 sub mock { bless {@_}, "Crypt::Password" };
 
 no warnings 'once', 'redefine';
-my $glib = $Crypt::Password::glib;
-diag "testing Crypt::Password (glib=".($glib ? "yes" : "no").")";
-diag "os is $^O";
+my $flav = $Crypt::Password::crypt_flav;
+diag "testing Crypt::Password (crypt_flav='$flav')";
+diag "os is '$^O'";
+my $line = (`man crypt`)[-1];
+$line =~ s/\s+/ /g;
+diag "bottom line of man crypt: '$line'";
 
-if ($glib) {
+if ($flav eq "glib") {
 #         _  _  _           
 #        | |(_)| |          
 #   __ _ | | _ | |__    ___ 
 #  / _` || || || '_ \  / __|
 # | (_| || || || |_) || (__ 
 #  \__, ||_||_||_.__/  \___|
-#   __/ |                   
+#  ; __/ |                   
 #  |___/                    
 
     diag "set algorithm";
@@ -104,7 +107,7 @@ if ($glib) {
         ok $p1 eq $p2, "comparison test";
     }
 }
-else {
+elsif ($flav eq "freesec") {
 # ______                    _____             
 # |  ___|                  /  ___|            
 # | |_    _ __   ___   ___ \ `--.   ___   ___ 
@@ -182,5 +185,25 @@ ANSWERS
     my $crypted = '$_12345555$V4oENXvTMYk';
     is(password($crypted), $crypted, "crypted password embodied");
     isnt(crypt_password($crypted), $crypted, "crypted crypt_password recrypted");
+}
+else {
+    diag "flav is $flav! how intruiging";
+
+    diag "simple usage: ".password('hello');
+    diag "simple usage: ".password('hello');
+    diag "simple usage: ".password('hello');
+    diag "supplied salt 1: ".password('hello', '123');
+    diag "supplied salt 1: ".password('hello', '123');
+    diag "supplied salt 1: ".password('hello', '123');
+    diag "supplied salt 2: ".password('hello', '12345678');
+    diag "supplied salt 2: ".password('hello', '12345678');
+    diag "supplied salt 2: ".password('hello', '12345678');
+    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blah');
+    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blah');
+    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blahblah');
+    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blahblah');
+    my $p = password("hello");
+    diag "made $p";
+    diag "check alright: ".($p->check("hello") ? "yes" : "no");
 }
 
