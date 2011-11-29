@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.07";
+our $VERSION = "0.09";
 
 use Carp;
 
@@ -124,15 +124,16 @@ our $flav_dispatch = {
 };
 
 sub flav {
-    my $what = shift;
-    my $ms = $flav_dispatch->{$crypt_flav} || die;
-    unless (exists $ms->{$what}) {
-        if (exists $ms->{base}) {
-            return flav($ms->{base}, @_);
+    my $func = shift;
+    my $flav = $flav_dispatch->{$crypt_flav} || die;
+    unless (exists $flav->{$func}) {
+        if (exists $flav->{base}) {
+            local $crypt_flav = $flav->{base};
+            return flav($func, @_);
         }
-        die "no $what handler for flav $crypt_flav";
+        die "no $func handler for (crypt flavour: $crypt_flav)";
     }
-    return $ms->{$what}->(@_);
+    return $flav->{$func}->(@_);
 }
 
 sub new {
