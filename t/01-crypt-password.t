@@ -18,6 +18,19 @@ $line =~ s/\s+/ /g;
 diag "bottom line of man crypt: '$line'";
 
 if ($flav eq "glib") {
+    glib();
+}
+elsif ($flav eq "freesec") {
+    freesec();
+}
+else {
+    misc();
+    diag "As if GLIB";
+    glib();
+    diag "As if freesec";
+    freesec();
+
+sub glib {
 #         _  _  _           
 #        | |(_)| |          
 #   __ _ | | _ | |__    ___ 
@@ -107,7 +120,7 @@ if ($flav eq "glib") {
         ok $p1 eq $p2, "comparison test";
     }
 }
-elsif ($flav eq "freesec") {
+sub freesec {
 # ______                    _____             
 # |  ___|                  /  ___|            
 # | |_    _ __   ___   ___ \ `--.   ___   ___ 
@@ -186,8 +199,9 @@ ANSWERS
     is(password($crypted), $crypted, "crypted password embodied");
     isnt(crypt_password($crypted), $crypted, "crypted crypt_password recrypted");
 }
-else {
-    diag "flav is $flav! how intruiging";
+
+sub other {
+    diag "flav is $flav! how intriguing";
 
     diag "simple usage: ".password('hello');
     diag "simple usage: ".password('hello');

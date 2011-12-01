@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.09";
+our $VERSION = "0.10";
 
 use Carp;
 
@@ -23,12 +23,15 @@ our %id_to_alg = reverse %alg_to_id;
 our $definitely_crypt;
 
 our $crypt_flav = do {
+    $^O =~ /^MSWin/ ? 'windows' : do {
     $_ = (`man crypt`)[-1];
+    /DragonFly/ ? 'dragonfly' :
     /NetBSD/ ? 'netbsd' :
     /OpenBSD/ ? 'openbsd' :
     /FreeBSD/ ? 'freebsd' :
     /FreeSec/ ? 'freesec' :
                 'glib'
+    }
 };
 our $flav_dispatch = {
     glib => {
@@ -120,6 +123,12 @@ our $flav_dispatch = {
     },
     openbsd => {
         base => "freebsd",
+    },
+    dragonfly => {
+        base => "freebsd",
+    },
+    windows => {
+        base => "freesec",
     },
 };
 
@@ -250,6 +259,7 @@ sub check {
 sub _do_crypt {
     my ($input, $salt) = @_;
     my $crypt = CORE::crypt($input, $salt);
+    warn "$input $salt = $crypt\n";
     $crypt = flav(format_crypted => $crypt);
     return $crypt;
 }
