@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.11 2011-12-02
+* nothing
+
 0.10 2011-12-01
 * debug stuff for cpantesters
 * half-support some underunderstood crypt implementations

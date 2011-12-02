@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.10";
+our $VERSION = "0.11";
 
 use Carp;
 
@@ -259,7 +259,7 @@ sub check {
 sub _do_crypt {
     my ($input, $salt) = @_;
     my $crypt = CORE::crypt($input, $salt);
-    warn "$input $salt = $crypt\n";
+    warn "# $input $salt = $crypt\n";
     $crypt = flav(format_crypted => $crypt);
     return $crypt;
 }

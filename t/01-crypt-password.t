@@ -29,6 +29,7 @@ else {
     glib();
     diag "As if freesec";
     freesec();
+}
 
 sub glib {
 #         _  _  _           
