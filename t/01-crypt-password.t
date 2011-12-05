@@ -24,7 +24,7 @@ elsif ($flav eq "freesec") {
     freesec();
 }
 else {
-    misc();
+    other();
     diag "As if GLIB";
     glib();
     diag "As if freesec";
