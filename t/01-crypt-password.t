@@ -26,8 +26,10 @@ elsif ($flav eq "freesec") {
 else {
     other();
     diag "As if GLIB";
+    $Crypt::Password::crypt_flav = "glib";
     glib();
     diag "As if freesec";
+    $Crypt::Password::crypt_flav = "freesec";
     freesec();
 }
 

@@ -174,7 +174,9 @@ sub password {
 sub crypt {
     my $self = shift;
     
-    $self->{crypted} ||= $self->_crypt
+    $self->{crypted} ||= $self->_crypt;
+
+    return "$self->{crypted}";
 }
 
 sub input {
