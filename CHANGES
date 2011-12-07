@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.15 2011-12-08
+* some more freebsd understanding
+
 0.14 2011-12-07
 * actually change the crypt_flav when testing variations
 * return a definite string value to avoid this "isn't numeric is string ne"

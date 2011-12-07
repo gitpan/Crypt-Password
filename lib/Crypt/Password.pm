@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.14";
+our $VERSION = "0.15";
 
 use Carp;
 
@@ -115,7 +115,35 @@ our $flav_dispatch = {
     freebsd => {
         base => "glib",
         default_algorithm => sub {
-            return "blowfish"
+            return "2"
+        },
+        format_crypted => sub {
+            my ($crypted, $salt) = (shift, pop);
+            if ($_[-1] =~ m/^\$.+\$(.+)$/) {
+                my $salt = $1;
+                # put the salt in there
+                $crypted =~ s/^\$(\d)/\$$1\$$salt\$/;
+            }
+            else {
+                # makes pretty ambiguous crypt strings, lets add some dollar signs
+                $crypted =~ s/^(_.{8}|..)(.{11})$/\$$1\$$2/
+                    || croak "failed to understand Extended-format freebsd crypt: '$crypted'";
+                # TODO if user passes underscorey salt they might want it plain Extended?
+            }
+            return $crypted;
+        },
+        looks_crypted => sub {
+            # with our dollar-signs added in around the salt
+            return $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x
+                || $_[0] =~ m{^\$.+\$.*\$.+$}
+        },
+        extract_salt => sub {
+            $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x;
+            my $s = $1;
+            $s || croak "Bad crypted input:"
+                    ." salt must be 2 or 8 characters long";
+            $s =~ s/^_//;
+            return $s
         },
     },
     netbsd => {
@@ -229,7 +257,7 @@ sub algorithm {
         }
     }
     elsif (!$self->{algorithm}) {
-        $self->algorithm(flav(default_algorithm));
+        $self->algorithm(flav("default_algorithm"));
     }
     else {
         $self->{algorithm}
@@ -262,7 +290,7 @@ sub _do_crypt {
     my ($input, $salt) = @_;
     my $crypt = CORE::crypt($input, $salt);
     warn "# $input $salt = $crypt\n";
-    $crypt = flav(format_crypted => $crypt);
+    $crypt = flav(format_crypted => $crypt, $input, $salt);
     return $crypt;
 }
 
