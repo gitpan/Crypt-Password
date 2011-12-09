@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.15";
+our $VERSION = "0.16";
 
 use Carp;
 
@@ -119,7 +119,7 @@ our $flav_dispatch = {
         },
         format_crypted => sub {
             my ($crypted, $salt) = (shift, pop);
-            if ($_[-1] =~ m/^\$.+\$(.+)$/) {
+            if ($salt =~ m/^\$.+\$(.+)$/) {
                 my $salt = $1;
                 # put the salt in there
                 $crypted =~ s/^\$(\d)/\$$1\$$salt\$/;
