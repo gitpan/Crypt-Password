@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.16";
+our $VERSION = "0.17";
 
 use Carp;
 
@@ -157,6 +157,22 @@ our $flav_dispatch = {
     },
     windows => {
         base => "freesec",
+        looks_crypted => sub {
+            return $_[0] =~ /^\$.+\$.+$/
+        },
+        salt_provided => sub {
+            return shift; # whatever
+        },
+        extract_salt => sub {
+            $_[0] =~ /^\$(.+?)\$.+$/ && return $1
+        },
+        format_crypted => sub {
+            $_[0] =~ s/^(..)(.+)$/\$$1\$$2/;
+            return $1;
+        },
+        form_salt => sub {
+            $_[0] =~ /(..)/ && return $1
+        },
     },
 };
 

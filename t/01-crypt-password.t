@@ -86,7 +86,7 @@ sub glib {
     
     my $c2 = password("hello0");
     like $c2, qr/^\$5\$(........)\$[a-zA-Z0-9\.\/]{43}$/, "another crypted";
-    isnt $c, $c2, "generated different salts";
+    isnt "$c", "".$c2, "generated different salts";
     ok $c->check("hello0"), "validates";
     ok !$c->check("hello1"), "invalidates";
     
@@ -114,7 +114,7 @@ sub glib {
     {
         my $password = '$5$%RK2BU%L$aFZd1/4Gpko/sJZ8Oh.ZHg9UvxCjkH1YYoLZI6tw7K8';
         is $password, password($password), "password embodied by password()";
-        isnt $password, crypt_password($password), "password recrypted by crypt_password()";
+        isnt "$password", "".crypt_password($password), "password recrypted by crypt_password()";
 
         # lately insane
         ok password($password) eq password($password), "comparison test";

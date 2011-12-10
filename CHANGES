@@ -1,5 +1,9 @@
 Revision history for Crypt::Password
 
+0.17 2011-12-10
+* work around weird unoverloading bug? in Test::More
+* experimental windows support
+
 0.16 2011-12-09
 * variabullo
 
