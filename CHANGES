@@ -1,5 +1,10 @@
 Revision history for Crypt::Password
 
+0.18 2011-12-10
+* freebsd dollarsing to include salt, empty salt
+* experiment with lots of algorithms
+* freebsd seems to like alg 1/5/6 not 2
+
 0.17 2011-12-10
 * work around weird unoverloading bug? in Test::More
 * experimental windows support

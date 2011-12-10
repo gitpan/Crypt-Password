@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.17";
+our $VERSION = "0.18";
 
 use Carp;
 
@@ -115,14 +115,15 @@ our $flav_dispatch = {
     freebsd => {
         base => "glib",
         default_algorithm => sub {
-            return "2"
+            return "5"
         },
         format_crypted => sub {
             my ($crypted, $salt) = (shift, pop);
-            if ($salt =~ m/^\$.+\$(.+)$/) {
-                my $salt = $1;
+            if ($salt =~ m/^\$(.+)\$(.*)$/) {
+                my ($alg, $salt) = ($1, $2);
                 # put the salt in there
-                $crypted =~ s/^\$(\d)/\$$1\$$salt\$/;
+                $crypted =~ s/^\$$alg/\$$alg\$$salt\$/
+                    || croak "failed to understand Modular-format freebsd crypt: '$crypted'";
             }
             else {
                 # makes pretty ambiguous crypt strings, lets add some dollar signs
