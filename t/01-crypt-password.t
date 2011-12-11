@@ -211,9 +211,9 @@ sub other {
         diag "algorithm: $_";
         diag "as glib: ". password('hello', '$'.$_.'$blah');
         diag "as glib: ". password('hello', '$'.$_.'$bl');
-        local $Crypt::Password::crypt_flav = "freesec";
-        diag "as glib: ". password('hello', '_blah');
-        diag "as glib: ". password('hello', 'bl');
+        local $Crypt::Password::crypt_flav = "freeseclax";
+        diag "as freesec: ". password('hello', '_blah');
+        diag "as freesec: ". password('hello', 'bl');
     } for 1..6;
     diag "simple usage: ".password('hello');
     diag "simple usage: ".password('hello');

@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.18";
+our $VERSION = "0.19";
 
 use Carp;
 
@@ -49,17 +49,33 @@ our $flav_dispatch = {
         },
         form_salt => sub {
             my ($s, $self) = @_;
-            if ($self->{algorithm_id}) {
-                $s = sprintf('$%s$%s', $self->{algorithm_id}, $s);
-            }
-            else {
-                # ->check(), alg and salt from ourselves, the rest be ignored
-                $s = "$self";
+            unless ($s =~ /^\$.+\$.*(\$.+)?$/) {
+                if ($self->{algorithm_id}) {
+                    # put algorithm id in the salt
+                    $s =~ s/^/\$$self->{algorithm_id}\$/;
+                }
+                else {
+                    # ->check(), alg and salt from ourselves, the rest be ignored
+                    $s = "$self";
+                }
             }
             return $s;
         },
         default_algorithm => sub {
             return "sha256";
+        },
+    },
+    freeseclax => {
+        base => 'freesec',
+        salt_provided => sub {
+            my $prov = shift;
+            return $prov;
+        },
+        format_crypted => sub {
+            my $crypt = shift;
+            # makes pretty ambiguous crypt strings, lets add some dollar signs
+            $crypt =~ s/^(.+)(.{11})$/\$$1\$$2/;
+            return $crypt;
         },
     },
     freesec => {
@@ -75,7 +91,7 @@ our $flav_dispatch = {
                 || $provided =~ m/^  (_.{8}|_?.{2})  (.{11})?$/x) {
                 $provided = $1;
             }
-            if ($provided =~ /^_..?$/) {
+            if ($provided =~ /^_..$/) {
                 croak "Bad salt input:"
                     ." 2-character salt cannot start with _";
             }
@@ -141,7 +157,7 @@ our $flav_dispatch = {
         extract_salt => sub {
             $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x;
             my $s = $1;
-            $s || croak "Bad crypted input:"
+            $s || 1 || croak "Bad crypted input:"
                     ." salt must be 2 or 8 characters long";
             $s =~ s/^_//;
             return $s

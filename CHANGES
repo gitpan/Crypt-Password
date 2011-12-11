@@ -1,5 +1,9 @@
 Revision history for Crypt::Password
 
+0.19 2011-12-11
+* freebsd Extended format experimentation
+* done re-add algorithm id to dollary salt
+
 0.18 2011-12-10
 * freebsd dollarsing to include salt, empty salt
 * experiment with lots of algorithms
