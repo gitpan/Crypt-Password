@@ -17,6 +17,11 @@ my $line = (`man crypt`)[-1];
 $line =~ s/\s+/ /g;
 diag "bottom line of man crypt: '$line'";
 
+sub isnt {
+    my ($a, $b, $c) = @_;
+    Test::More::isnt("$a", "$b", $c);
+}
+
 if ($flav eq "glib") {
     glib();
 }
@@ -40,7 +45,7 @@ sub glib {
 #  / _` || || || '_ \  / __|
 # | (_| || || || |_) || (__ 
 #  \__, ||_||_||_.__/  \___|
-#  ; __/ |                   
+#   __/ |                   
 #  |___/                    
 
     diag "set algorithm";

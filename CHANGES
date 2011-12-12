@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.2 2011-12-12
+* make a new isnt
+
 0.19 2011-12-11
 * freebsd Extended format experimentation
 * done re-add algorithm id to dollary salt

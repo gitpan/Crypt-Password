@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.19";
+our $VERSION = "0.2";
 
 use Carp;
 
@@ -91,7 +91,7 @@ our $flav_dispatch = {
                 || $provided =~ m/^  (_.{8}|_?.{2})  (.{11})?$/x) {
                 $provided = $1;
             }
-            if ($provided =~ /^_..$/) {
+            if ($provided =~ /^_..?$/) {
                 croak "Bad salt input:"
                     ." 2-character salt cannot start with _";
             }
