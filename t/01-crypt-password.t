@@ -230,10 +230,6 @@ sub other {
     diag "supplied salt 2: ".password('hello', '12345678');
     diag "supplied salt 2: ".password('hello', '12345678');
     diag "supplied salt 2: ".password('hello', '12345678');
-    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blah');
-    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blah');
-    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blahblah');
-    diag " o ".Crypt::Password::_do_crypt("blah", '$2a$blahblah');
     my $p = password("hello");
     diag "made $p";
     diag "check alright: ".($p->check("hello") ? "yes" : "no");

@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.20";
+our $VERSION = "0.21";
 
 use Carp;
 
@@ -13,7 +13,7 @@ use overload
 # from libc6 crypt/crypt-entry.c
 our %alg_to_id = (
     md5 => '1',
-    blowfish => '2a',
+    blowfish => '2',
     sha256 => '5',
     sha512 => '6',
 );
@@ -65,20 +65,7 @@ our $flav_dispatch = {
             return "sha256";
         },
     },
-    freeseclax => {
-        base => 'freesec',
-        salt_provided => sub {
-            my $prov = shift;
-            return $prov;
-        },
-        format_crypted => sub {
-            my $crypt = shift;
-            # makes pretty ambiguous crypt strings, lets add some dollar signs
-            $crypt =~ s/^(.+)(.{11})$/\$$1\$$2/;
-            return $crypt;
-        },
-    },
-    freesec => {
+    freesec => { # {{{
         looks_crypted => sub {
             # with our dollar-signs added in around the salt
             return $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x
@@ -127,7 +114,7 @@ our $flav_dispatch = {
         default_algorithm => sub {
             return "DES" # does nothing
         },
-    },
+    }, # }}}
     freebsd => {
         base => "glib",
         default_algorithm => sub {
