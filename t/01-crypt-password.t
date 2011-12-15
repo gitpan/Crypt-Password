@@ -211,25 +211,6 @@ ANSWERS
 sub other {
     diag "flav is $flav! how intriguing";
 
-    do {
-        local $Crypt::Password::crypt_flav = "glib";
-        diag "algorithm: $_";
-        diag "as glib: ". password('hello', '$'.$_.'$blah');
-        diag "as glib: ". password('hello', '$'.$_.'$bl');
-        local $Crypt::Password::crypt_flav = "freeseclax";
-        diag "as freesec: ". password('hello', '_blah');
-        diag "as freesec: ". password('hello', 'bl');
-    } for 1..6;
-    diag "simple usage: ".password('hello');
-    diag "simple usage: ".password('hello');
-    diag "simple usage: ".password('hello');
-    diag "supplied salt 1: ".password('hello', '123');
-    diag "supplied salt 1: ".password('hello', '123');
-    diag "supplied salt 1: ".password('hello', '123');
-    diag "supplied salt 1: ".password('hello', '123');
-    diag "supplied salt 2: ".password('hello', '12345678');
-    diag "supplied salt 2: ".password('hello', '12345678');
-    diag "supplied salt 2: ".password('hello', '12345678');
     my $p = password("hello");
     diag "made $p";
     diag "check alright: ".($p->check("hello") ? "yes" : "no");

@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.22 2011-12-15
+* less experimenting
+
 0.21 2011-12-15
 * tidy ups, blowfish = 2
 * dont croak ourselves on unknown algorithms
