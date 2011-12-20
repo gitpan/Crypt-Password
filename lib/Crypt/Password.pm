@@ -1,14 +1,10 @@
 package Crypt::Password;
 use Exporter 'import';
-@EXPORT = ('password', 'crypt_password');
-our $VERSION = "0.22";
+@EXPORT = (qw'password crypt_password check_password');
+our $VERSION = "0.23";
+our $TESTMODE = 0;
 
 use Carp;
-
-use overload
-    '""' => \&crypt,
-    'eq' => \&crypt,
-    'nomethod' => \&crypt;
 
 # from libc6 crypt/crypt-entry.c
 our %alg_to_id = (
@@ -19,16 +15,19 @@ our %alg_to_id = (
 );
 our %id_to_alg = reverse %alg_to_id;
 
-# switches off embodying crypted-looking passwords
+# switches off embodying crypted-looking passwords, like crypt_password()
 our $definitely_crypt;
 
 our $crypt_flav = do {
     $^O =~ /^MSWin/ ? 'windows' : do {
     $_ = (`man crypt`)[-1];
-    /DragonFly/ ? 'dragonfly' :
+    /DragonFly/ ? 'dragonflybsd' :
     /NetBSD/ ? 'netbsd' :
     /OpenBSD/ ? 'openbsd' :
-    /FreeBSD/ ? 'freebsd' :
+    /FreeBSD/ ? do {
+        /FreeBSD ([\d\.]+)/; # seems 9.0 starts supporting Modular format
+        $1 >= 9 ? 'freebsd' : 'freebsd_lt_9'
+    } :
     /FreeSec/ ? 'freesec' :
                 'glib'
     }
@@ -101,7 +100,7 @@ our $flav_dispatch = {
             my $crypt = shift;
             # makes pretty ambiguous crypt strings, lets add some dollar signs
             $crypt =~ s/^(_.{8}|..)(.{11})$/\$$1\$$2/
-                || croak "failed to understand FreeSec crypt: '$crypt'";
+                || croak "failed to understand Extended-format crypt: '$crypt'";
             return $crypt;
         },
         form_salt => sub {
@@ -115,49 +114,20 @@ our $flav_dispatch = {
             return "DES" # does nothing
         },
     }, # }}}
-    freebsd => {
-        base => "glib",
-        default_algorithm => sub {
-            return "5"
-        },
-        format_crypted => sub {
-            my ($crypted, $salt) = (shift, pop);
-            if ($salt =~ m/^\$(.+)\$(.*)$/) {
-                my ($alg, $salt) = ($1, $2);
-                # put the salt in there
-                $crypted =~ s/^\$$alg/\$$alg\$$salt\$/
-                    || croak "failed to understand Modular-format freebsd crypt: '$crypted'";
-            }
-            else {
-                # makes pretty ambiguous crypt strings, lets add some dollar signs
-                $crypted =~ s/^(_.{8}|..)(.{11})$/\$$1\$$2/
-                    || croak "failed to understand Extended-format freebsd crypt: '$crypted'";
-                # TODO if user passes underscorey salt they might want it plain Extended?
-            }
-            return $crypted;
-        },
-        looks_crypted => sub {
-            # with our dollar-signs added in around the salt
-            return $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x
-                || $_[0] =~ m{^\$.+\$.*\$.+$}
-        },
-        extract_salt => sub {
-            $_[0] =~ /^\$(_.{8}|.{2})\$ (.{11})?$/x;
-            my $s = $1;
-            $s || 1 || croak "Bad crypted input:"
-                    ." salt must be 2 or 8 characters long";
-            $s =~ s/^_//;
-            return $s
-        },
+    freebsd_lt_9 => {
+        base => "freesec",
     },
     netbsd => {
-        base => "freebsd",
+        base => "freebsd_lt_9",
     },
     openbsd => {
-        base => "freebsd",
+        base => "freebsd_lt_9",
     },
-    dragonfly => {
-        base => "freebsd",
+    dragonflybsd => {
+        base => "freebsd_lt_9",
+    },
+    freebsd => {
+        base => "glib",
     },
     windows => {
         base => "freesec",
@@ -198,12 +168,21 @@ sub new {
     password(@_);
 }
 
+sub password {
+    return _password(@_)->{crypted}
+}
+
 sub crypt_password {
     local $definitely_crypt = 1;
     return password(@_);
 }
 
-sub password {
+sub check_password {
+    my ($saved, $wild) = @_;
+    return $saved eq crypt_password($wild, $saved);
+}
+
+sub _password {
     my $self = bless {}, __PACKAGE__;
 
     $self->input(shift);
@@ -216,7 +195,7 @@ sub password {
         $self->crypt();
     }
 
-    $self
+    $self;
 }
 
 sub crypt {
@@ -297,20 +276,11 @@ sub _crypt {
     return _do_crypt($input, $salt);
 }
 
-sub check {
-    my $self = shift;
-    my $plaintext = shift;
-   
-    my $salt = $self->_form_salt();
-    my $new = _do_crypt($plaintext, $salt);
-    return $new eq "$self";
-}
-
 sub _do_crypt {
     my ($input, $salt) = @_;
     my $crypt = CORE::crypt($input, $salt);
-    warn "# $input $salt = $crypt\n";
     $crypt = flav(format_crypted => $crypt, $input, $salt);
+    warn "# $input $salt = $crypt\n" if $TESTMODE;
     return $crypt;
 }
 
@@ -340,11 +310,11 @@ Crypt::Password - Unix-style, Variously Hashed Passwords
 
  use Crypt::Password;
  
- my $hashed = password("newpassword");
+ my $hashed = password("plaintext");
  
  $user->set_password($hashed);
  
- if (password($from_database)->check($password_from_user)) {
+ if (check_password($hash_from_database, $text_from_user)) {
      # authenticated
  }
 
@@ -353,12 +323,13 @@ Crypt::Password - Unix-style, Variously Hashed Passwords
  # you also might want to
  password($a) eq password($b)
  # WARNING: password() will embody but not crypt an already crypted string.
- #          if you are checking something from the outside world, use check()
+ #          if you are checking something from the outside world, pass both
+ #          things to check_password()
 
  # imagine stealing a crypted string and using it as a password. it happens.
 
  # WARNING: the following applies to glibc's crypt() only
- #          Non-Linux systems beware.
+ #          Non-Linux systems beware, see KNOWN ISSUES
 
  # Default algorithm, supplied salt:
  my $hashed = password("password", "salt");
@@ -374,32 +345,31 @@ Crypt::Password - Unix-style, Variously Hashed Passwords
 This is just a wrapper for perl's C<crypt()>, which can do everything you would
 probably want to do to store a password, but this is to make usage easier.
 The object stringifies to the return string of the crypt() function, which is
-(B<on Linux/glibc>) in Modular Crypt Format:
+(on B<Linux/glibc> et al) in Modular Crypt Format:
 
  # scalar($hashed):
  #    v digest   v hash ->
  #   $5$%RK2BU%L$aFZd1/4Gpko/sJZ8Oh.ZHg9UvxCjkH1YYoLZI6tw7K8
  #      ^ salt ^
 
-That you can store, etc, retrieve then give it to C<password()> again to
-C<-E<gt>check($given_password)>.
+That you can store, etc, retrieve then use it in C<check_password()> to validate
+a login, etc.
 
 Not without some danger, so read on, you could also string compare it to the
-output of another C<password()>, as long as the salt is the same. Actually, if
-you are running on B<Linux/glibc> you can pass the first password as the salt
-to the second and it will get it right. Anyway, the danger:
+output of another C<password()>, as long as the salt is the same. If you pass
+a crypted string as the salt it will use the same salt.
 
 If the given string is already hashed it is assumed to be okay to use it as is.
-So if you are checking something from the outside world, C<-E<gt>check($it)>
-against the thing you can trust. You could also use C<crypt_password()>, which
-will definitely crypt its input.
+So if you are checking something from the outside world pass it as the second
+argument to C<check_password($saved, $wild)>. You could also use
+C<crypt_password($wild)>, which will definitely crypt its input.
 
 This means simpler code and users can supply pre-hashed passwords initially, but
 if you do it wrong a stolen hash could be used as a password, so buck up your ideas.
 
 If you aren't running B<Linux/glibc>, everything after the WARNING in the synopsis
-is dubious as. If you've got insight into how this module can work better on
-B<Darwin/FreeSec> I would love to hear from you.
+is dubious as. If you've got insight into how this module can work better on your
+platform I would love to hear from you.
 
 =head1 FUNCTIONS
 
@@ -409,6 +379,10 @@ B<Darwin/FreeSec> I would love to hear from you.
 
 Constructs a Crypt::Password object.
 
+=item check_password ( $saved_crypt, $wild_password )
+
+Checks that $wild_password is what $saved_crypt was.
+
 =item crypt_password ( $password [, $salt [, $algorithm]] )
 
 Same as above but will definitely crypt $password, even if it looks crypted.
@@ -416,35 +390,22 @@ See warning labels.
 
 =back
 
-=head1 METHODS
-
-=over
-
-=item check ( $another_password )
-
-Checks the given password hashes the same as that this object represents.
-
-=item crypt
-
-Returns the crypt string, same as stringifying the object.
-
-=item salt
-
-Returns the salt.
-
-=back
-
 =head1 KNOWN ISSUES
 
 Cryptographic functionality depends greatly on your local B<crypt(3)>.
 Old Linux may not support sha*, many other platforms only support md5, or that
-and Blowfish, etc. You are likely fine.
+and Blowfish, etc. You are likely fine, but you should run the test suite and
+read the output carefully. Better still, run your own test suite and you'll know
+you're okay.
 
-On FreeSec's crypt, the crypted format is much different. Firstly, salt strings
-must be either two or eight characters long, in the latter case they will be
-prepended with an underscore for you. In the string you get back we also put the
-salt between two dollar signs, to make it slightly less ambiguous, less likely
-for C<password()> to assume something is crypted when it is not...
+Implementations break down into Modular Format and Extended Format.
+
+Linux/glib does Modular Format as described in DESCRIPTION, it supports many
+algorithms, supposedly.
+
+FreeSec and most BSDs do Extended Format with the DES algorithm. We modify the
+output so it's easier to parse again by putting dollar signs in around the salt.
+The salt must be 2 or 8 characters long, or just 2 on Windows.
 
 =head1 SUPPORT, SOURCE
 

@@ -1,5 +1,10 @@
 Revision history for Crypt::Password
 
+0.23 2011-12-20
+* test refactoring
+* thinking more in terms of extended, modular and... windows
+* throw away overloading/external OO, add check_password($crypted, $plain)
+
 0.22 2011-12-15
 * less experimenting
 
