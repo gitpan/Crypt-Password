@@ -34,7 +34,8 @@ $special->{extended} = sub {
     is(password("123", "_12341234"), '$_12341234$zPVAQUxtWss', "salt can start with _") for 1..2;
     is(password("a", "cc"), '$cc$IxmriBVsviU', "two character salt") for 1..3;
     ok(check_password('$_DADAdada$LASg2sXIXlI', "hello0"), "check_password");
-    ok(check_password('$_DADAdada$LASg2sXIXlI', "hello1"), "check_password incorrect");
+    ok(!check_password('$_DADAdada$LASg2sXIXlI', "hello1"), "check_password incorrect");
+    ok(!check_password('$_zzzzzzzz$LASg2sXIXlI', "hello0"), "check_password incorrect");
     
     if ($flav ne "windows") {
         diag "remake some known crypts";
@@ -69,11 +70,6 @@ ANSWERS
         is $p, '$_bbbbbbbb$DJEHexiq9NI', "salt=8 crypt";
         $@ = "";
     }
-    my $p;
-    eval { $p = password('a', 'cc') };
-    is $@, "", "salt=2 no error";
-    is $p, '$cc$DFDkLhMbQ7wZ.', "salt=2 crypt";
-    $@ = "";
 };
 $special->{modular} = sub {
     diag "modular special";
@@ -152,6 +148,6 @@ sub experiment {
     eval {
         $special->{$other}->();
     };
-    diag "errors: $@";
+    diag "errors: $@" if $@;
 }
 

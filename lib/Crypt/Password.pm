@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = (qw'password crypt_password check_password');
-our $VERSION = "0.23";
+our $VERSION = "0.24";
 our $TESTMODE = 0;
 
 use Carp;
