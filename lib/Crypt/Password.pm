@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = (qw'password crypt_password check_password');
-our $VERSION = "0.24";
+our $VERSION = "0.25";
 our $TESTMODE = 0;
 
 use Carp;
@@ -135,17 +135,23 @@ our $flav_dispatch = {
             return $_[0] =~ /^\$.+\$.+$/
         },
         salt_provided => sub {
-            return shift; # whatever
+            $_[0] =~ /^\$(.+?)\$.+/ ? $1 : $_[0]
         },
         extract_salt => sub {
-            $_[0] =~ /^\$(.+?)\$.+$/ && return $1
+            $_[0] =~ /^\$(.+?)\$.+$/; return $1
         },
         format_crypted => sub {
-            $_[0] =~ s/^(..)(.+)$/\$$1\$$2/;
+            my ($c, $i, $s) = @_;
+            my ($sa, $sb) = $s =~ /^(..)(.+)$/;
+            if ($TESTMODE) {
+                warn "# '$c' ".($c =~ /^$sb(?!$sa)/?"":"!")."= first 2 chars of salt ($s";
+            }
+            # first two characters of salt is used, it seems
+            $c =~ s/^$sa/\$$s\$/;
             return $1;
         },
         form_salt => sub {
-            $_[0] =~ /(..)/ && return $1
+            $_[0] =~ /^(\$|,|_)/ ? $_[0] : "_$_[0]"
         },
     },
 };

@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.25 2011-12-23
+* some tweaks for windows
+
 0.24 2011-12-21
 * fix tests
 

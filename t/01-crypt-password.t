@@ -14,15 +14,30 @@ no warnings 'once', 'redefine';
 my $flav = $Crypt::Password::crypt_flav;
 diag "testing Crypt::Password (crypt_flav='$flav')";
 diag "os is '$^O'";
-my $line = (`man crypt`)[-1];
-$line =~ s/\s+/ /g;
-diag "bottom line of man crypt: '$line'";
+unless ($flav eq "windows") {
+    my $line = (`man crypt`)[-1];
+    $line =~ s/\s+/ /g;
+    diag "bottom line of man crypt: '$line'";
+}
 
 diag "generate salt"; {
     my %uniq = map { mock()->salt() => undef } 1..20;
     is scalar(keys %uniq), 20, "random salts generated";
     my %uniq2 = map { password("hello") => undef } 1..20;
     is scalar(keys %uniq2), 20, "randomly salted hashes";
+}
+
+if ($flav eq "windows") {
+    password("wintest", "_testtest");
+    password("wintest", "_testbluh");
+    password("wintest", "_aestbluh");
+    password("wintest", "_aestblu");
+    password("wintest", "_aestblu");
+    password("wintest", "_aestbla");
+    password('wintest', '$$');
+    password('wintest', '$a');
+    password('wintest', '$aetc');
+    password('wintest', ',hello');
 }
 
 my $special;
