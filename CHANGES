@@ -1,5 +1,8 @@
 Revision history for Crypt::Password
 
+0.26 2012-02-15
+* dont feed hash part in as salt, solaris uses too much for salt
+
 0.25 2011-12-23
 * some tweaks for windows
 

@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = (qw'password crypt_password check_password');
-our $VERSION = "0.25";
+our $VERSION = "0.26";
 our $TESTMODE = 0;
 
 use Carp;
@@ -58,6 +58,7 @@ our $flav_dispatch = {
                     $s = "$self";
                 }
             }
+            $s = $1 if $s =~ /^(\$.+?\$.+?)\$/;
             return $s;
         },
         default_algorithm => sub {
