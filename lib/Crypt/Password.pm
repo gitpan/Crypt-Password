@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = (qw'password crypt_password check_password');
-our $VERSION = "0.26";
+our $VERSION = "0.27";
 our $TESTMODE = 0;
 
 use Carp;
@@ -21,6 +21,7 @@ our $definitely_crypt;
 our $crypt_flav = do {
     $^O =~ /^MSWin/ ? 'windows' : do {
     $_ = (`man crypt`)[-1];
+    !defined($_) ? 'freesec' :
     /DragonFly/ ? 'dragonflybsd' :
     /NetBSD/ ? 'netbsd' :
     /OpenBSD/ ? 'openbsd' :
@@ -28,6 +29,7 @@ our $crypt_flav = do {
         /FreeBSD ([\d\.]+)/; # seems 9.0 starts supporting Modular format
         $1 >= 9 ? 'freebsd' : 'freebsd_lt_9'
     } :
+    /MirOS/ ? 'windows' :
     /FreeSec/ ? 'freesec' :
                 'glib'
     }
