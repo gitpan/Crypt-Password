@@ -1,7 +1,7 @@
 package Crypt::Password;
 use Exporter 'import';
 @EXPORT = (qw'password crypt_password check_password');
-our $VERSION = "0.27";
+our $VERSION = "0.28";
 our $TESTMODE = 0;
 
 use Carp;
@@ -19,7 +19,7 @@ our %id_to_alg = reverse %alg_to_id;
 our $definitely_crypt;
 
 our $crypt_flav = do {
-    $^O =~ /^MSWin/ ? 'windows' : do {
+    $^O =~ /^MSWin|cygwin/ ? 'windows' : do {
     $_ = (`man crypt`)[-1];
     !defined($_) ? 'freesec' :
     /DragonFly/ ? 'dragonflybsd' :
@@ -154,6 +154,7 @@ our $flav_dispatch = {
             return $1;
         },
         form_salt => sub {
+            return shift;
             $_[0] =~ /^(\$|,|_)/ ? $_[0] : "_$_[0]"
         },
     },

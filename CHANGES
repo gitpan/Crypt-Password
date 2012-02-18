@@ -1,5 +1,9 @@
 Revision history for Crypt::Password
 
+0.28 2012-02-18
+* windows support
+* cygwin = windows
+
 0.27 2012-02-16
 * some more guesses at cross-platform behaviour
 
